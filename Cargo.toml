@@ -40,6 +40,7 @@ pin-project = "1.0.7"
 pretty-hex = "0.4.0"
 rand = "0.8.3"
 rtsp-types = "0.1.0"
+scuffle-h265 = { git = "https://github.com/ScuffleCloud/scuffle", version = "0.2.2" }
 sdp-types = "0.1.4"
 smallvec = { version = "1.6.1", features = ["union"] }
 thiserror = "2.0.17"

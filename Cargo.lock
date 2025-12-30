@@ -315,6 +315,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d71b6127be86fdcfddb610f7182ac57211d4b18a3e9c82eb2d17662f2227ad6a"
 
 [[package]]
+name = "bytestring"
+version = "1.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "113b4343b5f6617e7ad401ced8de3cc8b012e73a594347c307b90db3e9271289"
+dependencies = [
+ "bytes",
+]
+
+[[package]]
 name = "cast"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1585,6 +1594,11 @@ dependencies = [
 ]
 
 [[package]]
+name = "nutype-enum"
+version = "0.1.5"
+source = "git+https://github.com/ScuffleCloud/scuffle#6cafac75a66bdd57f0a401ed12593d824452d392"
+
+[[package]]
 name = "object"
 version = "0.37.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2037,6 +2051,7 @@ dependencies = [
  "pretty_assertions",
  "rand 0.8.5",
  "rtsp-types",
+ "scuffle-h265",
  "sdp-types",
  "smallvec",
  "thiserror 2.0.17",
@@ -2226,6 +2241,36 @@ name = "scopeguard"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "94143f37725109f92c262ed2cf5e59bce7498c01bcc1502d7b9afe439a4e9f49"
+
+[[package]]
+name = "scuffle-bytes-util"
+version = "0.1.5"
+source = "git+https://github.com/ScuffleCloud/scuffle#6cafac75a66bdd57f0a401ed12593d824452d392"
+dependencies = [
+ "bytes",
+ "bytestring",
+]
+
+[[package]]
+name = "scuffle-expgolomb"
+version = "0.1.5"
+source = "git+https://github.com/ScuffleCloud/scuffle#6cafac75a66bdd57f0a401ed12593d824452d392"
+dependencies = [
+ "scuffle-bytes-util",
+]
+
+[[package]]
+name = "scuffle-h265"
+version = "0.2.2"
+source = "git+https://github.com/ScuffleCloud/scuffle#6cafac75a66bdd57f0a401ed12593d824452d392"
+dependencies = [
+ "bitflags 2.9.4",
+ "byteorder",
+ "bytes",
+ "nutype-enum",
+ "scuffle-bytes-util",
+ "scuffle-expgolomb",
+]
 
 [[package]]
 name = "sdp"
