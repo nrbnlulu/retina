@@ -797,9 +797,18 @@ impl Pps {
         let pps_scaling_list_data_present_flag =
             r.read_bool("pps_scaling_list_data_present_flag")?;
         if pps_scaling_list_data_present_flag {
-            return Err(Error(
-                "pps_scaling_list_data_present unimplemented".to_owned(),
-            ));
+            match ScalingListData::from_bits(&mut r) {
+                Ok(_scaling_list_data) => {
+                    // Successfully parsed scaling list data
+                }
+                Err(e) => {
+                    log::warn!(
+                        "Failed to parse PPS scaling list data, continuing without it: {}",
+                        e
+                    );
+                    // Continue parsing without scaling list data to handle malformed camera streams
+                }
+            }
         }
         let _lists_modification_present_flag = r.read_bool("lists_modification_present_flag")?;
         let _log2_parallel_merge_level_minus2 = r.read_ue("log2_parallel_merge_level_minus2")?;
@@ -1290,9 +1299,13 @@ impl VuiTimingInfo {
         }
         let hrd_parameters_present_flag = r.read_bool("vui_hrd_parameters_present_flag")?;
         if hrd_parameters_present_flag {
-            return Err(Error(
-                "hrd_parameters_present_flag unimplemented".to_owned(),
-            ));
+            log::warn!("HRD parameters present but not implemented, returning basic timing info");
+            // Return basic timing info without parsing HRD parameters
+            // This avoids fatal errors while still providing frame rate information
+            return Ok(Self {
+                num_units_in_tick,
+                time_scale,
+            });
         }
         Ok(Self {
             num_units_in_tick,

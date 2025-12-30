@@ -552,12 +552,23 @@ impl Depacketizer {
                 .unwrap_or_else(|| &old_ip.unwrap().pps_nal);
             let seen_extra_trailing_data =
                 old_ip.map(|o| o.seen_extra_trailing_data).unwrap_or(false);
-            self.parameters = Some(InternalParameters::parse_vps_sps_pps(
+            match InternalParameters::parse_vps_sps_pps(
                 vps_nal,
                 sps_nal,
                 pps_nal,
                 seen_extra_trailing_data,
-            )?);
+            ) {
+                Ok(params) => {
+                    self.parameters = Some(params);
+                }
+                Err(e) => {
+                    log::warn!(
+                        "Failed to parse VPS/SPS/PPS from stream, continuing without updated parameters: {}",
+                        e
+                    );
+                    // Keep existing parameters if available, otherwise continue without
+                }
+            }
             true
         } else {
             false

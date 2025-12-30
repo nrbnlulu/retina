@@ -105,12 +105,15 @@ impl Processor {
         info!("sending frame {} to ffmpeg", self.encoded_frame_i);
         let data = f.into_data();
 
+        // Convert from retina's length-prefixed format to Annex-B format for ffmpeg
+        let annex_b_data = convert_to_annex_b(&data);
+
         // XXX: It'd be better to avoid this copy, but ffmpeg-next offers only a
         // limited `packet::Borrow` (no mutable access to any aspect of the
         // packet, not just the main buffer) or a full `packet::Packet` (which
         // owns the main buffer and can be used with `add_extra_data`). This is
         // just a proof-of-concept anyway.
-        let mut pkt = ffmpeg::codec::packet::Packet::copy(&data);
+        let mut pkt = ffmpeg::codec::packet::Packet::copy(&annex_b_data);
         if let Some(p) = new_params {
             pkt_add_extra_data(&mut pkt, p.extra_data());
         }
@@ -224,6 +227,42 @@ fn ffmpeg_owned_input_buffer(buf: &[u8]) -> *mut u8 {
 
 // This frame writing logic lifted from ffmpeg-next's examples/dump-frames.rs and
 // <https://github.com/zmwangx/rust-ffmpeg/pull/243>.
+/// Convert retina's length-prefixed NAL format to Annex-B format for ffmpeg
+fn convert_to_annex_b(length_prefixed_data: &[u8]) -> Vec<u8> {
+    let mut annex_b_data = Vec::new();
+    let mut offset = 0;
+
+    while offset < length_prefixed_data.len() {
+        if offset + 4 > length_prefixed_data.len() {
+            break; // Not enough data for length prefix
+        }
+
+        // Read the 4-byte length prefix (big endian)
+        let nal_length = u32::from_be_bytes([
+            length_prefixed_data[offset],
+            length_prefixed_data[offset + 1],
+            length_prefixed_data[offset + 2],
+            length_prefixed_data[offset + 3],
+        ]) as usize;
+
+        offset += 4;
+
+        if offset + nal_length > length_prefixed_data.len() {
+            break; // Not enough data for this NAL unit
+        }
+
+        // Add Annex-B start code: 0x00 0x00 0x00 0x01
+        annex_b_data.extend_from_slice(&[0x00, 0x00, 0x00, 0x01]);
+
+        // Add the NAL unit data
+        annex_b_data.extend_from_slice(&length_prefixed_data[offset..offset + nal_length]);
+
+        offset += nal_length;
+    }
+
+    annex_b_data
+}
+
 fn write_ppm(frame: &ffmpeg::util::frame::Video, filename: impl AsRef<Path>) -> Result<(), Error> {
     let mut file = std::io::BufWriter::new(File::create(filename)?);
     file.write_all(format!("P6\n{} {}\n255\n", frame.width(), frame.height()).as_bytes())?;
@@ -269,7 +308,6 @@ async fn run() -> Result<(), Error> {
                 match s.encoding_name() {
                     "jpeg" => return Some((i, ffmpeg::codec::Id::MJPEG)),
                     "h264" => return Some((i, ffmpeg::codec::Id::H264)),
-                    #[cfg(feature = "h265")]
                     "h265" => return Some((i, ffmpeg::codec::Id::H265)),
                     _ => {
                         log::info!(
@@ -306,15 +344,23 @@ async fn run() -> Result<(), Error> {
                 match item {
                     Some(Ok(CodecItem::VideoFrame(f))) => {
                         let params = f.has_new_parameters().then(|| match session.streams()[video_stream_i].parameters() {
-                            Some(ParametersRef::Video(v)) => v,
-                            _ => unreachable!(),
-                        });
+                            Some(ParametersRef::Video(v)) => Some(v),
+                            Some(_) => {
+                                log::warn!("Expected video parameters but got different type, skipping");
+                                None
+                            }
+                            None => {
+                                log::warn!("Video frame indicates new parameters but none available, skipping");
+                                None
+                            }
+                        }).flatten();
                         if !processor.send_frame(f, params)? {
                             break;
                         }
                     },
                     Some(Ok(_)) => {},
                     Some(Err(e)) => {
+                        error!("RTSP stream error: {}", e);
                         return Err(anyhow!(e).context("RTSP failure"));
                     }
                     None => {
