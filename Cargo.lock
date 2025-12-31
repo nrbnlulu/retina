@@ -895,6 +895,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "ffmpeg-record"
+version = "0.0.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "ffmpeg-next",
+ "futures",
+ "log",
+ "mylog",
+ "retina",
+ "tokio",
+ "url",
+]
+
+[[package]]
 name = "ffmpeg-sys-next"
 version = "8.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1158,6 +1173,22 @@ dependencies = [
  "ff",
  "rand_core 0.6.4",
  "subtle",
+]
+
+[[package]]
+name = "gst-record"
+version = "0.0.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "futures",
+ "gstreamer",
+ "gstreamer-app",
+ "log",
+ "mylog",
+ "retina",
+ "tokio",
+ "url",
 ]
 
 [[package]]

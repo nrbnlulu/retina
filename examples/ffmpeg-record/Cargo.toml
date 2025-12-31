@@ -1,0 +1,21 @@
+[package]
+name = "ffmpeg-record"
+version = "0.0.0"
+edition = "2024"
+publish = false
+rust-version = "1.88"
+
+[features]
+default = ["h265"]
+h265 = ["retina/h265"]
+
+[dependencies]
+anyhow = "1.0"
+clap = { version = "4.1", features = ["derive"] }
+ffmpeg-next = { version = "8.0.0", default-features = false, features = ["codec", "format"] }
+futures = "0.3"
+log = "0.4"
+mylog = { git = "https://github.com/scottlamb/mylog" }
+retina = { path = "../../" }
+tokio = { version = "1.5", features = ["macros", "rt-multi-thread", "signal", "time"] }
+url = "2.2"
