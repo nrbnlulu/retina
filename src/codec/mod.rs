@@ -117,6 +117,7 @@ pub mod h265;
 
 pub(crate) mod onvif;
 pub(crate) mod simple_audio;
+pub(crate) mod gstreamer_depay;
 
 /// An item yielded from [`crate::client::Demuxed`]'s [`futures::stream::Stream`] impl.
 #[derive(Debug)]
@@ -699,6 +700,7 @@ enum DepacketizerInner {
     H265(Box<h265::Depacketizer>),
     Onvif(Box<onvif::Depacketizer>),
     Jpeg(Box<jpeg::Depacketizer>),
+    GStreamer(Box<gstreamer_depay::Depacketizer>),
 }
 
 impl Depacketizer {
@@ -714,15 +716,13 @@ impl Depacketizer {
         // RTP Payload Format Media Types
         // https://www.iana.org/assignments/rtp-parameters/rtp-parameters.xhtml#rtp-parameters-2
         Ok(Depacketizer(match (media, encoding_name) {
-            ("video", "h264") => DepacketizerInner::H264(Box::new(h264::Depacketizer::new(
-                clock_rate,
-                format_specific_params,
-            )?)),
+            ("video", "h264") => DepacketizerInner::GStreamer(Box::new(
+                gstreamer_depay::Depacketizer::new("h264", clock_rate, format_specific_params)?,
+            )),
             #[cfg(feature = "h265")]
-            ("video", "h265") => DepacketizerInner::H265(Box::new(h265::Depacketizer::new(
-                clock_rate,
-                format_specific_params,
-            )?)),
+            ("video", "h265") => DepacketizerInner::GStreamer(Box::new(
+                gstreamer_depay::Depacketizer::new("h265", clock_rate, format_specific_params)?,
+            )),
             ("image" | "video", "jpeg") => DepacketizerInner::Jpeg(Box::default()),
             ("audio", "mpeg4-generic") => DepacketizerInner::Aac(Box::new(aac::Depacketizer::new(
                 clock_rate,
@@ -797,6 +797,7 @@ impl Depacketizer {
             DepacketizerInner::Onvif(d) => d.parameters(),
             DepacketizerInner::SimpleAudio(d) => d.parameters(),
             DepacketizerInner::Jpeg(d) => d.parameters(),
+            DepacketizerInner::GStreamer(d) => d.parameters(),
         }
     }
 
@@ -815,6 +816,7 @@ impl Depacketizer {
             DepacketizerInner::Onvif(d) => d.push(input),
             DepacketizerInner::SimpleAudio(d) => d.push(input),
             DepacketizerInner::Jpeg(d) => d.push(input),
+            DepacketizerInner::GStreamer(d) => d.push(input),
         }
     }
 
@@ -836,6 +838,7 @@ impl Depacketizer {
             DepacketizerInner::Onvif(d) => Ok(d.pull()),
             DepacketizerInner::SimpleAudio(d) => Ok(d.pull()),
             DepacketizerInner::Jpeg(d) => Ok(d.pull()),
+            DepacketizerInner::GStreamer(d) => d.pull().map_err(|e| Error(std::sync::Arc::new(ErrorInt::Internal(Box::new(std::io::Error::new(std::io::ErrorKind::Other, e)))))),
         }
     }
 }

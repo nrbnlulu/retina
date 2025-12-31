@@ -269,7 +269,6 @@ async fn run() -> Result<(), Error> {
                 match s.encoding_name() {
                     "jpeg" => return Some((i, ffmpeg::codec::Id::MJPEG)),
                     "h264" => return Some((i, ffmpeg::codec::Id::H264)),
-                    #[cfg(feature = "h265")]
                     "h265" => return Some((i, ffmpeg::codec::Id::H265)),
                     _ => {
                         log::info!(
@@ -305,6 +304,7 @@ async fn run() -> Result<(), Error> {
             item = session.next() => {
                 match item {
                     Some(Ok(CodecItem::VideoFrame(f))) => {
+                        info!("Received VideoFrame: timestamp={}, size={}", f.timestamp(), f.data().len());
                         let params = f.has_new_parameters().then(|| match session.streams()[video_stream_i].parameters() {
                             Some(ParametersRef::Video(v)) => v,
                             _ => unreachable!(),
